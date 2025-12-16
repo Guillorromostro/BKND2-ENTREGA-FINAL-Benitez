@@ -1,45 +1,21 @@
 ﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const isBcryptHash = (val) => typeof val === 'string' && /^\$2[aby]\$\d{2}\$/.test(val);
-
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true, trim: true },
-  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password: { type: String, required: true },
+  username: { type: String, required: true, trim: true, unique: true },
+  email: { type: String, required: true, trim: true, unique: true, lowercase: true },
+  password: { type: String, required: true, select: false },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 }, { timestamps: true });
 
-// Aplicar hash en create/save
-userSchema.pre('save', function (next) {
-  if (!this.isModified('password')) return next();
-  if (isBcryptHash(this.password)) return next();
-  try {
-    this.password = bcrypt.hashSync(this.password, 10);
-    next();
-  } catch (e) {
-    next(e);
-  }
+// Hash de password antes de guardar
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Hash en updates (findOneAndUpdate / findByIdAndUpdate)
-userSchema.pre('findOneAndUpdate', function (next) {
-  const update = this.getUpdate() || {};
-  if (update.password && !isBcryptHash(update.password)) {
-    try {
-      update.password = bcrypt.hashSync(update.password, 10);
-      this.setUpdate(update);
-    } catch (e) {
-      return next(e);
-    }
-  }
-  next();
-});
+const User = mongoose.model('User', userSchema);
 
-// Método de ayuda (opcional)
-userSchema.methods.comparePassword = function (plain) {
-  return bcrypt.compareSync(plain, this.password);
-};
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;
 

@@ -7,87 +7,29 @@ API REST para un backend de e‑commerce con:
 - Logging con Winston (silencioso en tests)
 
 ## Requisitos
-- Node.js 18+ (recomendado)
-- npm
+- Node.js 18+
+- Cuenta de MongoDB Atlas (o Mongo local para desarrollo)
 
 ## Instalación
 1. Clona el repositorio:
    git clone https://github.com/Guillorromostro/BKND2-ENTREGA1-Benitez.git
 2. Instala dependencias:
    npm ci
-   # o
-   npm install
 
-## Configuración
-Crea un archivo .env en la raíz con tus valores. Ejemplo:
+## Configuración (MongoDB Atlas y variables de entorno)
+1. Crea un archivo `.env` basado en `.env.example`.
+2. En Atlas, crea un cluster y una base `ecommerce`. Genera un usuario y habilita acceso desde tu IP.
+3. Copia el connection string SRV en `MONGODB_URI`.
+4. Define `JWT_SECRET` (no lo publiques). Ajusta `COOKIE_*` según el entorno (en producción, `COOKIE_SECURE=true`).
 
-PORT=3000
-MONGO_URI=mongodb://localhost:27017/ecommerce
-JWT_SECRET=supersecret
-LOG_LEVEL=info
-NODE_ENV=development
-
-Notas:
-- LOG_LEVEL: niveles típicos de Winston (error, warn, info, http, verbose, debug, silly).
-- Durante los tests (NODE_ENV=test), el logger no imprime por consola.
-
-## Ejecución
-- Desarrollo/producción (según tus scripts):
+## Scripts
+- Desarrollo:
   - npm start
-  - o: node src/app.js
-- Pruebas:
+- Tests:
   - npx jest
-  - o: npm test (si defines el script en package.json)
+  - o npm test (si está definido en package.json)
 
-## Endpoints principales (referencia)
-- Auth:
-  - POST /api/auth/register
-  - POST /api/auth/login
-- Usuarios:
-  - GET /api/users
-  - POST /api/users
-  - (puede incluir más rutas según permisos/roles)
-- Productos:
-  - GET /api/products
-  - POST /api/products
-- Categorías:
-  - GET /api/categories
-  - POST /api/categories
-- Órdenes:
-  - GET /api/orders
-  - POST /api/orders
-
-Las rutas exactas pueden variar según tu implementación.
-
-## Estructura del proyecto
-- src/
-  - app.js
-  - controllers/
-  - models/
-  - services/
-  - repositories/
-  - routes/
-  - middlewares/
-  - utils/
-    - logger.js
-- test/
-  - unit/
-  - integration/
-- jest.config.js, jest.setup.js, jest.teardown.js
-
-## Logging
-- Winston a consola por defecto.
-- En tests (NODE_ENV=test) no se imprime.
-- Puedes configurar niveles con LOG_LEVEL.
-- Los archivos de log comunes (combined.log, error.log) están ignorados en .gitignore.
-
-## Scripts útiles (sugeridos)
-En package.json puedes añadir:
-"scripts": {
-  "start": "node src/app.js",
-  "test": "jest --runInBand"
-}
-
-## Contribución
-- Ejecuta las pruebas antes de hacer commit: npx jest
-- Sigue el estilo existente y agrega pruebas para nuevas funcionalidades.
+## Notas de seguridad
+- Nunca publiques `.env` ni secretos.
+- El JWT no incluye contraseña ni datos sensibles.
+- Cookies marcadas como `httpOnly` y `secure` (en producción).

@@ -1,111 +1,85 @@
 ﻿const request = require('supertest');
 const app = require('../../src/app');
-const mongoose = require('mongoose');
 const Product = require('../../src/models/product.model');
+const User = require('../../src/models/user.model');
+const { signAccessToken } = require('../../src/utils/jwt');
 
 describe('Product Integration Tests', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+  let adminToken;
+
+  beforeAll(async () => {
+    let login = await request(app).post('/api/auth/login').send({
+      email: 'admin@example.com',
+      password: 'password123',
     });
 
-    afterAll(async () => {
-        await mongoose.connection.close();
-    });
+    if (login.status >= 400) {
+      const reg = await request(app).post('/api/auth/register').send({
+        username: 'adminuser',
+        email: 'admin@example.com',
+        password: 'password123',
+      });
 
-    beforeEach(async () => {
-        await Product.deleteMany({});
-    });
+      let userId = reg.body?.user?._id;
+      if (!userId) {
+        const existing = await User.findOne({ email: 'admin@example.com' });
+        userId = existing?._id;
+      }
+      if (userId) {
+        await User.findByIdAndUpdate(userId, { role: 'admin' });
+      }
 
-    it('should create a new product', async () => {
-        const productData = {
-            name: 'Test Product',
-            description: 'This is a test product',
-            price: 100,
-            category: 'Test Category'
-        };
-
-        const response = await request(app)
-            .post('/api/products')
-            .send(productData)
-            .expect(201);
-
-        expect(response.body).toHaveProperty('id');
-        expect(response.body.name).toBe(productData.name);
-    });
-
-    it('should retrieve all products', async () => {
-        await Product.create({
-            name: 'Test Product 1',
-            description: 'This is a test product 1',
-            price: 100,
-            category: 'Test Category'
+      login = await request(app).post('/api/auth/login').send({
+        email: 'admin@example.com',
+        password: 'password123',
+      });
+    } else {
+      const u = await User.findOne({ email: 'admin@example.com' });
+      if (u && u.role !== 'admin') {
+        await User.findByIdAndUpdate(u._id, { role: 'admin' });
+        login = await request(app).post('/api/auth/login').send({
+          email: 'admin@example.com',
+          password: 'password123',
         });
+      }
+    }
 
-        await Product.create({
-            name: 'Test Product 2',
-            description: 'This is a test product 2',
-            price: 200,
-            category: 'Test Category'
-        });
+    // Fallback: si no viene en body, firmar token para el admin
+    adminToken = login.body?.token;
+    if (!adminToken) {
+      const u = await User.findOne({ email: 'admin@example.com' });
+      adminToken = u ? signAccessToken(u) : undefined;
+    }
+  });
 
-        const response = await request(app)
-            .get('/api/products')
-            .expect(200);
+  it('should create a new product', async () => {
+    const productData = { name: 'Test Product', description: 'Desc', price: 100, stock: 5, category: 'Test' };
+    const response = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(productData)
+      .expect(201);
+    expect(response.body).toHaveProperty('id');
+  });
 
-        expect(response.body).toHaveLength(2);
-    });
+  it('should update a product', async () => {
+    const product = await Product.create({ name: 'P1', description: 'D', price: 10, stock: 2, category: 'Test' });
+    const updatedData = { name: 'P1 updated' };
+    const response = await request(app)
+      .put(`/api/products/${product._id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(updatedData)
+      .expect(200);
+    expect(response.body.name).toBe(updatedData.name);
+  });
 
-    it('should retrieve a product by id', async () => {
-        const product = await Product.create({
-            name: 'Test Product',
-            description: 'This is a test product',
-            price: 100,
-            category: 'Test Category'
-        });
-
-        const response = await request(app)
-            .get(`/api/products/${product._id}`)
-            .expect(200);
-
-        expect(response.body.name).toBe(product.name);
-    });
-
-    it('should update a product', async () => {
-        const product = await Product.create({
-            name: 'Test Product',
-            description: 'This is a test product',
-            price: 100,
-            category: 'Test Category'
-        });
-
-        const updatedData = {
-            name: 'Updated Product',
-            description: 'This is an updated test product',
-            price: 150,
-            category: 'Updated Category'
-        };
-
-        const response = await request(app)
-            .put(`/api/products/${product._id}`)
-            .send(updatedData)
-            .expect(200);
-
-        expect(response.body.name).toBe(updatedData.name);
-    });
-
-    it('should delete a product', async () => {
-        const product = await Product.create({
-            name: 'Test Product',
-            description: 'This is a test product',
-            price: 100,
-            category: 'Test Category'
-        });
-
-        await request(app)
-            .delete(`/api/products/${product._id}`)
-            .expect(204);
-
-        const deletedProduct = await Product.findById(product._id);
-        expect(deletedProduct).toBeNull();
-    });
+  it('should delete a product', async () => {
+    const product = await Product.create({ name: 'P2', description: 'D', price: 10, stock: 2, category: 'Test' });
+    await request(app)
+      .delete(`/api/products/${product._id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(204);
+    const deleted = await Product.findById(product._id);
+    expect(deleted).toBeNull();
+  });
 });

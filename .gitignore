@@ -6,7 +6,6 @@ coverage/
 .env.*
 *.local
 
-# Logs
 logs/
 *.log
 npm-debug.log*
@@ -15,7 +14,4 @@ pnpm-debug.log*
 error.log
 combined.log
 
-# Editor/OS
-.DS_Store
-Thumbs.db
 .vscode/

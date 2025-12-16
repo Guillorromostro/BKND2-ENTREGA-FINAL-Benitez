@@ -1,21 +1,21 @@
 ﻿const Product = require('../models/product.model');
 
-exports.getAllProducts = async (req, res, next) => {
+async function getProducts(req, res, next) {
   try {
     const products = await Product.find().lean();
     return res.json(products);
   } catch (e) { next(e); }
-};
+}
 
-exports.getProductById = async (req, res, next) => {
+async function getProductById(req, res, next) {
   try {
     const prod = await Product.findById(req.params.id).lean();
     if (!prod) return res.status(404).json({ message: 'Product not found' });
     return res.json(prod);
   } catch (e) { next(e); }
-};
+}
 
-exports.createProduct = async (req, res, next) => {
+async function createProduct(req, res, next) {
   try {
     const created = await Product.create(req.body);
     return res.status(201).json({
@@ -27,20 +27,28 @@ exports.createProduct = async (req, res, next) => {
       stock: created.stock,
     });
   } catch (e) { next(e); }
-};
+}
 
-exports.updateProduct = async (req, res, next) => {
+async function updateProduct(req, res, next) {
   try {
     const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
     if (!updated) return res.status(404).json({ message: 'Product not found' });
     return res.json(updated);
   } catch (e) { next(e); }
-};
+}
 
-exports.deleteProduct = async (req, res, next) => {
+async function deleteProduct(req, res, next) {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Product not found' });
     return res.status(204).send();
   } catch (e) { next(e); }
+}
+
+module.exports = {
+  createProduct,
+  getProducts,
+  getProductById,
+  updateProduct,
+  deleteProduct,
 };

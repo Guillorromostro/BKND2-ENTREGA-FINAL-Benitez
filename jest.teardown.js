@@ -1,13 +1,10 @@
 ﻿/* eslint-env node */
+const mongoose = require('mongoose');
+
 module.exports = async () => {
   try {
-    const mongoose = require('mongoose');
-    await mongoose.disconnect();
-  } catch {}
-  try {
-    const logger = require('./src/utils/logger');
-    if (logger && typeof logger.close === 'function') {
-      await logger.close();
+    if (mongoose.connection?.readyState) {
+      await mongoose.disconnect();
     }
   } catch {}
 };

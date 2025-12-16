@@ -1,8 +1,10 @@
-﻿const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+﻿const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
+const { signAccessToken } = require('../utils/jwt');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
+const COOKIE_NAME = process.env.COOKIE_NAME || 'access_token';
+const COOKIE_SECURE = String(process.env.COOKIE_SECURE).toLowerCase() === 'true';
+const COOKIE_SAME_SITE = process.env.COOKIE_SAME_SITE || 'lax';
 
 exports.register = async (req, res, next) => {
   try {
@@ -15,8 +17,18 @@ exports.register = async (req, res, next) => {
     if (exists) return res.status(400).json({ message: 'User already exists' });
 
     const user = await User.create({ username, email, password }); // hash via hook del modelo
-    const token = jwt.sign({ id: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-    return res.status(201).json({ token });
+    const token = signAccessToken(user);
+
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAME_SITE,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    const src = user.toObject ? user.toObject() : user;
+    const { password: _pwd, ...safeUser } = src; // evitar redeclaración
+    return res.status(201).json({ user: safeUser, token });
   } catch (err) {
     if (err && err.code === 11000) return res.status(400).json({ message: 'User already exists' });
     next(err);
@@ -33,8 +45,18 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-    return res.status(200).json({ token });
+    const token = signAccessToken(user);
+
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAME_SITE,
+      maxAge: 24 * 60 * 60 * 1000, // 1 día
+    });
+
+    const src = user.toObject ? user.toObject() : user;
+    const { password: _pwd, ...safeUser } = src; // evitar redeclaración
+    return res.status(200).json({ user: safeUser, token });
   } catch (err) {
     next(err);
   }

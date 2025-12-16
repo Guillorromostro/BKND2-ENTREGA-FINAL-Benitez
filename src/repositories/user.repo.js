@@ -1,35 +1,21 @@
 ﻿const User = require('../models/user.model');
 
-const createUser = async (userData) => {
-    const user = new User(userData);
-    return await user.save();
-};
+class UserRepository {
+  async create(data) { return User.create(data); }
+  async findById(id) { return User.findById(id); }
+  async findByEmail(email) { return User.findOne({ email }).select('+password'); }
+  async updateById(id, updates) { return User.findByIdAndUpdate(id, updates, { new: true }); }
+  async deleteById(id) { return User.findByIdAndDelete(id); }
+  async findAll() { return User.find(); }
+}
 
-const getUserById = async (userId) => {
-    return await User.findById(userId);
-};
-
-const getAllUsers = async () => {
-    return await User.find();
-};
-
-const updateUser = async (userId, updateData) => {
-    return await User.findByIdAndUpdate(userId, updateData, { new: true });
-};
-
-const deleteUser = async (userId) => {
-    return await User.findByIdAndDelete(userId);
-};
-
-const findUserByEmail = async (email) => {
-    return await User.findOne({ email });
-};
-
+const repo = new UserRepository();
 module.exports = {
-    createUser,
-    getUserById,
-    getAllUsers,
-    updateUser,
-    deleteUser,
-    findUserByEmail,
+  ...repo,
+  // alias para compatibilidad con tests antiguos
+  createUser: (...a) => repo.create(...a),
+  getUserById: (...a) => repo.findById(...a),
+  updateUser: (...a) => repo.updateById(...a),
+  deleteUser: (...a) => repo.deleteById(...a),
+  getAllUsers: (...a) => repo.findAll(...a),
 };

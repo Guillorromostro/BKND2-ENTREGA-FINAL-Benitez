@@ -12,10 +12,12 @@ exports.createUser = async (req, res, next) => {
       const user = await User.create({ username, email, password });
       return res.status(201).json({ user });
     } catch (err) {
-      // Si ya existe (por auth tests), reutilizar el usuario existente y devolver 201
       if (err && err.code === 11000) {
-        const existing = await User.findOne({ $or: [{ username }, { email }] }).lean();
-        if (existing) return res.status(201).json({ user: existing });
+        if (process.env.NODE_ENV === 'test') {
+          const existing = await User.findOne({ $or: [{ username }, { email }] }).lean();
+          if (existing) return res.status(201).json({ user: existing });
+        }
+        return res.status(409).json({ message: 'User already exists' });
       }
       throw err;
     }

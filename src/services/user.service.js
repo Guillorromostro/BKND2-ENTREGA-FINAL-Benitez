@@ -1,27 +1,25 @@
 ﻿const userRepo = require('../repositories/user.repo');
-const { hashPassword, comparePassword } = require('../utils/password');
+const { userDTO } = require('../utils/dtos/user.dto');
 
-const createUser = async (userData) => {
-  const hashed = await hashPassword(userData.password);
-  return userRepo.createUser({ ...userData, password: hashed, role: userData.role || 'user' });
-};
+async function createUser(data) {
+  const user = await userRepo.createUser(data);
+  return userDTO(user);
+}
+async function getUserById(id) {
+  const user = await userRepo.getUserById(id);
+  return userDTO(user);
+}
+async function updateUser(id, updates) {
+  const user = await userRepo.updateUser(id, updates);
+  return userDTO(user);
+}
+async function deleteUser(id) {
+  await userRepo.deleteUser(id);
+  return true;
+}
+async function getAllUsers() {
+  const users = await userRepo.getAllUsers();
+  return users.map(userDTO);
+}
 
-const getUserById = (id) => userRepo.getUserById(id);
-const getAllUsers = () => userRepo.getAllUsers();
-
-const updateUser = async (id, data) => {
-  if (data.password) data.password = await hashPassword(data.password);
-  return userRepo.updateUser(id, data);
-};
-
-const deleteUser = (id) => userRepo.deleteUser(id);
-
-const authenticateUser = async (email, password) => {
-  const user = await userRepo.findUserByEmail(email);
-  if (!user) throw new Error('Invalid credentials');
-  const ok = await comparePassword(password, user.password);
-  if (!ok) throw new Error('Invalid credentials');
-  return user;
-};
-
-module.exports = { createUser, getUserById, getAllUsers, updateUser, deleteUser, authenticateUser };
+module.exports = { createUser, getUserById, updateUser, deleteUser, getAllUsers };

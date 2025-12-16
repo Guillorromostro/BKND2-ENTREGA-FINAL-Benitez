@@ -2,6 +2,7 @@
 const OrderItem = require('../models/orderItem.model');
 const User = require('../models/user.model');
 const Product = require('../models/product.model');
+const Ticket = require('../models/ticket.model');
 
 const createOrder = async (userId, orderData) => {
     const order = new Order({
@@ -41,10 +42,32 @@ const deleteOrder = async (orderId) => {
     return await Order.findByIdAndDelete(orderId);
 };
 
+async function checkout(userId, cartItems) {
+  // cartItems: [{ productId, quantity }]
+  const items = [];
+  let amount = 0;
+  for (const { productId, quantity } of cartItems) {
+    const p = await Product.findById(productId);
+    if (!p) continue;
+    if (p.stock >= quantity) {
+      p.stock -= quantity;
+      await p.save();
+      items.push({ product: p._id, quantity, price: p.price, status: 'purchased' });
+      amount += p.price * quantity;
+    } else {
+      items.push({ product: p._id, quantity, price: p.price, status: 'out_of_stock' });
+    }
+  }
+  const status = items.every(i => i.status === 'purchased') ? 'complete' : 'partial';
+  const ticket = await Ticket.create({ purchaser: userId, items, amount, status });
+  return ticket;
+}
+
 module.exports = {
     createOrder,
     getOrderById,
     getAllOrders,
     updateOrderStatus,
     deleteOrder,
+    checkout
 };

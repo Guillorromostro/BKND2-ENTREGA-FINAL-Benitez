@@ -2,20 +2,21 @@
 const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
 const User = require('../models/user.model');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
+const secret = process.env.JWT_SECRET || 'test_secret_key'; // fallback para entorno de test
 
 const opts = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: JWT_SECRET,
+  secretOrKey: secret,
+  algorithms: ['HS256'],
 };
 
 const verify = async (payload, done) => {
   try {
-    const user = await User.findById(payload.id).select('-password').lean();
+    const user = await User.findById(payload.sub);
     if (!user) return done(null, false);
     return done(null, user);
-  } catch (e) {
-    return done(e, false);
+  } catch (err) {
+    return done(err, false);
   }
 };
 

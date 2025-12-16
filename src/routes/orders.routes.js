@@ -1,14 +1,19 @@
 ﻿const express = require('express');
-const orderController = require('../controllers/order.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
-const { authorize } = require('../middlewares/role.middleware');
-
 const router = express.Router();
+const passport = require('../config/passport');
+const { authorizeRoles } = require('../middlewares/role.middleware');
+const { checkout } = require('../services/order.service');
 
-router.get('/', authenticate, authorize('admin'), orderController.getAllOrders);
-router.get('/:id', authenticate, orderController.getOrderById);
-router.post('/', authenticate, orderController.createOrder);
-router.put('/:id', authenticate, authorize('admin'), orderController.updateOrder);
-router.delete('/:id', authenticate, authorize('admin'), orderController.deleteOrder);
+router.post(
+  '/checkout',
+  passport.authenticate('current', { session: false }),
+  authorizeRoles('user'),
+  async (req, res, next) => {
+    try {
+      const ticket = await checkout(req.user._id, req.body.items || []);
+      res.status(201).json({ ticket });
+    } catch (err) { next(err); }
+  }
+);
 
 module.exports = router;

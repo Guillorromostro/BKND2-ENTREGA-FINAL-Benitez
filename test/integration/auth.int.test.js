@@ -5,11 +5,11 @@ const User = require('../../src/models/user.model');
 
 describe('Authentication Integration Tests', () => {
     beforeAll(async () => {
-        await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+        // await mongoose.connect(process.env.MONGODB_URI);
     });
 
     afterAll(async () => {
-        await mongoose.connection.close();
+        await mongoose.disconnect();
     });
 
     beforeEach(async () => {
